@@ -276,6 +276,20 @@ async def command_remove_from_filter(message, client, args):
         await message.channel.send('"{}" is not in the filter.'.format(thing_to_remove))
 
 
+async def delete_message(message):
+    try:
+        await message.delete()
+        return True
+    except discord.Forbidden:
+        await message.guild.owner.send(
+            'Error on deleting message in the {} guild, I do not have the appropriate permissions.'.format(
+                message.guild.name))
+    except discord.HTTPException:
+        await message.guild.owner.send(
+            'Error on deleting message in the {} guild.'.format(message.guild.name))
+    return False
+
+
 async def black_list_filter(message, client):
     server_id = message.guild.id
     if check_if_enabled(server_id) == 1:
@@ -290,12 +304,7 @@ async def black_list_filter(message, client):
                     for word in words_to_check:
                         if word.upper() == black_list_word.upper():
                             await message.author.send('Please refrain from using black listed words.')
-                            try:
-                                await message.delete()
-                            except discord.Forbidden:
-                                await message.guild.owner.send('Error on deleting message in the {} guild, I do not have the appropriate permissions.'.format(message.guild.name))
-                            except discord.HTTPException:
-                                await message.guild.owner.send('Error on deleting message in the {} guild.'.format(message.guild.name))
+                            return await delete_message(message)
 
 
 
@@ -317,15 +326,7 @@ async def white_list_filter(message, client):
 
             if used_word == False:
                 await message.author.send('Please use one of the white listed words.')
-                try:
-                    await message.delete()
-                except discord.Forbidden:
-                    await message.guild.owner.send(
-                        'Error on deleting message in the {} guild, I do not have the appropriate permissions.'.format(
-                            message.guild.name))
-                except discord.HTTPException:
-                    await message.guild.owner.send(
-                        'Error on deleting message in the {} guild.'.format(message.guild.name))
+                return await delete_message(message)
 
 
 async def red_list_filter(message, client):
@@ -342,15 +343,4 @@ async def red_list_filter(message, client):
                     if red_list_word.upper() in message.content.upper():
                         await message.author.send(
                             'Please refrain from using red list words.')
-                        try:
-                            await message.delete()
-                            return True
-                        except discord.Forbidden:
-                            await message.guild.owner.send(
-                                'Error on deleting message in the {} guild, I do not have the appropriate permissions.'.format(
-                                    message.guild.name))
-                        except discord.HTTPException:
-                            await message.guild.owner.send(
-                                'Error on deleting message in the {} guild.'.format(message.guild.name))
-    return False
-
+                        return await delete_message(message)
