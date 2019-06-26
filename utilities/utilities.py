@@ -14,6 +14,8 @@ async def execute_commands(message, client):
     elif args[0] == '$cf' and args[3] == 'remove':
         await chat_filter.command_remove_from_filter(message, client, args)
 
-    await chat_filter.black_list_filter(message, client)
-    await chat_filter.white_list_filter(message, client)
-    await chat_filter.red_list_filter(message, client)
+    message_deleted = await chat_filter.black_list_filter(message, client)
+    if message_deleted != True:
+        message_deleted = chat_filter.white_list_filter(message, client)
+        if message_deleted != True:
+            chat_filter.red_list_filter(message, client)
