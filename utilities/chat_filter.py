@@ -19,6 +19,10 @@ def get_table_name(filter_type, type_to_add):
         return 'redListWords'
     elif filter_type == 'rl' and type_to_add == 'channel':
         return 'redListChannels'
+    elif filter_type == 'chrlm' and type_to_add == 'limit':
+        return 'charLimit'
+    elif filter_type == 'chrlm' and type_to_add == 'channel':
+        return 'charLimitChannels'
 
 
 def check_if_channel_filtered(server_id, channel_name, filter_type):
@@ -28,23 +32,21 @@ def check_if_channel_filtered(server_id, channel_name, filter_type):
     if filter_type == "blacklist":
         c.execute('SELECT channelID FROM blackListChannels WHERE channelID = ?', (channel_name,))
         data = c.fetchall()
-        if len(data) > 0:
-            return_value = 1
     elif filter_type == "whitelist":
         c.execute('SELECT channelID FROM whiteListChannels WHERE channelID = ?', (channel_name,))
         data = c.fetchall()
-        if len(data) > 0:
-            return_value = 1
     elif filter_type == "redlist":
         c.execute('SELECT channelID FROM redListChannels WHERE channelID = ?', (channel_name,))
         data = c.fetchall()
-        if len(data) > 0:
-            return_value = 1
+    elif filter_type == "charlimit":
+        c.execute('SELECT channelID FROM charLimitChannels WHERE channelID = ?', (channel_name,))
+        data = c.fetchall()
+    if len(data) > 0:
+        return_value = 1
     conn.commit()
     c.close()
     conn.close()
     return return_value
-
 
 
 # Creates a table for the specified table type in the database
@@ -57,12 +59,16 @@ def create_table(server_id, table_name):
         c.execute('CREATE TABLE IF NOT EXISTS whiteListWords(whiteListedWord TEXT)')
     elif table_name == 'redListWords':
         c.execute('CREATE TABLE IF NOT EXISTS redListWords(redListedWord TEXT)')
+    elif table_name == 'charLimit':
+        c.execute('CREATE TABLE IF NOT EXISTS charLimit(lim INTEGER)')
     elif table_name == 'blackListChannels':
         c.execute('CREATE TABLE IF NOT EXISTS blackListChannels(channelID TEXT)')
     elif table_name == 'whiteListChannels':
         c.execute('CREATE TABLE IF NOT EXISTS whiteListChannels(channelID TEXT)')
     elif table_name == 'redListChannels':
         c.execute('CREATE TABLE IF NOT EXISTS redListChannels(channelID TEXT)')
+    elif table_name == 'charLimitChannels':
+        c.execute('CREATE TABLE IF NOT EXISTS charLimitChannels(channelID TEXT)')
     elif table_name == 'enabled':
         c.execute('CREATE TABLE IF NOT EXISTS enableFilter(enable INTEGER)')
     conn.commit()
@@ -169,6 +175,14 @@ def add_to_filter(server_id, thing_to_add, table_name):
             return_value = 1
         else:
             return_value = 0
+    elif table_name == 'charLimitChannels':
+        c.execute('SELECT channelID FROM charLimitChannels WHERE channelID = ?', (thing_to_add,))
+        data = c.fetchall()
+        if len(data) == 0:
+            c.execute('INSERT INTO charLimitChannels VALUES(?)', (thing_to_add,))
+            return_value = 1
+        else:
+            return_value = 0
     conn.commit()
     c.close()
     conn.close()
@@ -228,11 +242,33 @@ def remove_from_filter(server_id, thing_to_remove, table_name):
         else:
             return_value = 1
             c.execute('DELETE FROM redListChannels WHERE channelID = ?', (thing_to_remove,))
+    elif table_name == 'charLimitChannels':
+        c.execute('SELECT channelID FROM charLimitChannels WHERE channelID = ?', (thing_to_remove,))
+        data = c.fetchall()
+        if len(data) == 0:
+            return_value = 0
+        else:
+            return_value = 1
+            c.execute('DELETE FROM charLimitChannels WHERE channelID = ?', (thing_to_remove,))
     conn.commit()
     c.close()
     conn.close()
     return return_value
 
+
+def set_char_limit(server_id, limit):
+    create_table(server_id, 'charLimit')
+    conn = sqlite3.connect(storage_path.format(server_id))
+    c = conn.cursor()
+    c.execute('SELECT lim FROM charLimit')
+    data = c.fetchall()
+    if len(data) == 0:
+        c.execute('INSERT INTO charLimit VALUES(?)', (limit,))
+    else:
+        c.execute('UPDATE charLimit SET lim = ?', (limit,))
+    conn.commit()
+    c.close()
+    conn.close()
 
 # Commands Portion
 
@@ -248,6 +284,13 @@ async def command_disable_filter(message, client):
     server_id = message.guild.id
     disable_filter(server_id)
     await message.channel.send('The chat filter has been disabled.')
+
+
+async def command_set_char_limit(message, client, args):
+    server_id = message.guild.id
+    limit = args[4]
+    set_char_limit(server_id, limit)
+    await message.channel.send('The new character limit is "{}."'.format(limit))
 
 
 async def command_add_to_filter(message, client, args):
@@ -304,6 +347,8 @@ async def black_list_filter(message, client):
                     for word in words_to_check:
                         if word.upper() == black_list_word.upper():
                             await message.author.send('Please refrain from using black listed words.')
+                            c.close()
+                            conn.close()
                             return await delete_message(message)
 
 
@@ -326,6 +371,8 @@ async def white_list_filter(message, client):
 
             if used_word == False:
                 await message.author.send('Please use one of the white listed words.')
+                c.close()
+                conn.close()
                 return await delete_message(message)
 
 
@@ -333,7 +380,6 @@ async def red_list_filter(message, client):
     server_id = message.guild.id
     if check_if_enabled(server_id) == 1:
         if check_if_channel_filtered(server_id, message.channel.name, 'redlist') == 1:
-            words_to_check = message.content.split()
             conn = sqlite3.connect(storage_path.format(server_id))
             c = conn.cursor()
             c.execute('SELECT redListedWord FROM redListWords')
@@ -343,4 +389,23 @@ async def red_list_filter(message, client):
                     if red_list_word.upper() in message.content.upper():
                         await message.author.send(
                             'Please refrain from using red list words.')
+                        c.close()
+                        conn.close()
+                        return await delete_message(message)
+
+
+async def char_limit_filter(message, client):
+    server_id = message.guild.id
+    if check_if_enabled(server_id):
+        if check_if_channel_filtered(server_id, message.channel.name, 'charlimit') == 1:
+            conn =sqlite3.connect(storage_path.format(server_id))
+            c = conn.cursor()
+            c.execute('SELECT lim FROM charLimit')
+            data = c.fetchall()
+            for item in data:
+                for limit in item:
+                    if len(message.content) > limit:
+                        await message.author.send('Please refrain from going over the character limit of {}.'.format(limit))
+                        c.close()
+                        conn.close()
                         return await delete_message(message)
