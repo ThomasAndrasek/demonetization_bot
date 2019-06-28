@@ -27,6 +27,8 @@ def get_table_name(filter_type, type_to_add):
         return 'charLimitChannels'
     elif filter_type == 'repeat' and type_to_add == 'channel':
         return 'repeatChannels'
+    elif filter_type == 'caps' and type_to_add == 'channel':
+        return 'capsChannels'
 
 
 def check_if_channel_filtered(server_id, channel_name, filter_type):
@@ -43,6 +45,8 @@ def check_if_channel_filtered(server_id, channel_name, filter_type):
         c.execute('SELECT channelID FROM charLimitChannels WHERE channelID = ?', (channel_name,))
     elif filter_type == 'repeat':
         c.execute('SELECT channelID FROM repeatChannels WHERE channelID = ?', (channel_name,))
+    elif filter_type == 'caps':
+        c.execute('SELECT channelID FROM capsChannels WHERE channelID = ?', (channel_name,))
     data = c.fetchall()
     if len(data) > 0:
         return_value = 1
@@ -74,6 +78,8 @@ def create_table(server_id, table_name):
         c.execute('CREATE TABLE IF NOT EXISTS charLimitChannels(channelID TEXT)')
     elif table_name == 'repeatChannels':
         c.execute('CREATE TABLE IF NOT EXISTS repeatChannels(channelID TEXT)')
+    elif table_name == 'capsChannels':
+        c.execute('CREATE TABLE IF NOT EXISTS capsChannels(channelID TEXT)')
     elif table_name == 'enabled':
         c.execute('CREATE TABLE IF NOT EXISTS enableFilter(enable INTEGER)')
     conn.commit()
@@ -196,6 +202,14 @@ def add_to_filter(server_id, thing_to_add, table_name):
             return_value = 1
         else:
             return_value = 0
+    elif table_name == 'capsChannels':
+        c.execute('SELECT channelID FROM capsChannels WHERE channelID = ?', (thing_to_add,))
+        data = c.fetchall()
+        if len(data) == 0:
+            c.execute('INSERT INTO capsChannels VALUES(?)', (thing_to_add,))
+            return_value = 1
+        else:
+            return_value = 0
     conn.commit()
     c.close()
     conn.close()
@@ -271,6 +285,14 @@ def remove_from_filter(server_id, thing_to_remove, table_name):
         else:
             return_value = 1
             c.execute('DELETE FROM repeatChannels WHERE channelID = ?', (thing_to_remove,))
+    elif table_name == 'capsChannels':
+        c.execute('SELECT channelID FROM capsChannels WHERE channelID = ?', (thing_to_remove,))
+        data = c.fetchall()
+        if len(data) == 0:
+            return_value = 0
+        else:
+            return_value = 1
+            c.execute('DELETE FROM capsChannels WHERE channelID = ?', (thing_to_remove,))
     conn.commit()
     c.close()
     conn.close()
@@ -291,53 +313,66 @@ def set_char_limit(server_id, limit):
     c.close()
     conn.close()
 
+
+async def check_permissions(message):
+    user_permissions = message.channel.permissions_for(message.author)
+    if user_permissions.administrator or user_permissions.manage_messages:
+        return True
+    else:
+        await message.channel.send('Sorry, you do not have the appropriate server permissions to use this command.')
+        return False
 # Commands Portion
 
 
 # Enable Filter
-async def command_enable_filter(message, client):
-    server_id = message.guild.id
-    enable_filter(server_id)
-    await message.channel.send('The chat filter has been enabled.')
+async def command_enable_filter(message):
+    if await check_permissions(message):
+        server_id = message.guild.id
+        enable_filter(server_id)
+        await message.channel.send('The chat filter has been enabled.')
 
 
-async def command_disable_filter(message, client):
-    server_id = message.guild.id
-    disable_filter(server_id)
-    await message.channel.send('The chat filter has been disabled.')
+async def command_disable_filter(message):
+    if await check_permissions(message):
+        server_id = message.guild.id
+        disable_filter(server_id)
+        await message.channel.send('The chat filter has been disabled.')
 
 
-async def command_set_char_limit(message, client, args):
-    server_id = message.guild.id
-    limit = args[4]
-    set_char_limit(server_id, limit)
-    await message.channel.send('The new character limit is "{}."'.format(limit))
+async def command_set_char_limit(message, args):
+    if await check_permissions(message):
+        server_id = message.guild.id
+        limit = args[4]
+        set_char_limit(server_id, limit)
+        await message.channel.send('The new character limit is "{}."'.format(limit))
 
 
-async def command_add_to_filter(message, client, args):
-    server_id = message.guild.id
-    filter_type = args[1]
-    type_to_add = args[2]
-    thing_to_add = args[4]
-    table_name = get_table_name(filter_type, type_to_add)
-    return_value = add_to_filter(server_id, thing_to_add, table_name)
-    if return_value == 1:
-        await message.channel.send('I have added "{}" to the {} filter.'.format(thing_to_add, filter_type))
-    else:
-        await message.channel.send('"{}" has already been added.'.format(thing_to_add))
+async def command_add_to_filter(message, args):
+    if await check_permissions(message):
+        server_id = message.guild.id
+        filter_type = args[1]
+        type_to_add = args[2]
+        thing_to_add = args[4]
+        table_name = get_table_name(filter_type, type_to_add)
+        return_value = add_to_filter(server_id, thing_to_add, table_name)
+        if return_value == 1:
+            await message.channel.send('I have added "{}" to the {} filter.'.format(thing_to_add, filter_type))
+        else:
+            await message.channel.send('"{}" has already been added.'.format(thing_to_add))
 
 
-async def command_remove_from_filter(message, client, args):
-    server_id = message.guild.id
-    filter_type = args[1]
-    type_to_add = args[2]
-    thing_to_remove = args[4]
-    table_name = get_table_name(filter_type, type_to_add)
-    return_value = remove_from_filter(server_id, thing_to_remove, table_name)
-    if return_value == 1:
-        await message.channel.send('I have removed "{}" from the {} filter.'.format(thing_to_remove, filter_type))
-    else:
-        await message.channel.send('"{}" is not in the filter.'.format(thing_to_remove))
+async def command_remove_from_filter(message, args):
+    if await check_permissions(message):
+        server_id = message.guild.id
+        filter_type = args[1]
+        type_to_add = args[2]
+        thing_to_remove = args[4]
+        table_name = get_table_name(filter_type, type_to_add)
+        return_value = remove_from_filter(server_id, thing_to_remove, table_name)
+        if return_value == 1:
+            await message.channel.send('I have removed "{}" from the {} filter.'.format(thing_to_remove, filter_type))
+        else:
+            await message.channel.send('"{}" is not in the filter.'.format(thing_to_remove))
 
 
 async def delete_message(message):
@@ -354,7 +389,7 @@ async def delete_message(message):
     return False
 
 
-async def black_list_filter(message, client):
+async def black_list_filter(message):
     server_id = message.guild.id
     if check_if_enabled(server_id) == 1:
         if check_if_channel_filtered(server_id, message.channel.name, 'blacklist') == 1:
@@ -374,7 +409,7 @@ async def black_list_filter(message, client):
 
 
 
-async def white_list_filter(message, client):
+async def white_list_filter(message):
     server_id = message.guild.id
     if check_if_enabled(server_id) == 1:
         if check_if_channel_filtered(server_id, message.channel.name, 'whitelist') == 1:
@@ -397,7 +432,7 @@ async def white_list_filter(message, client):
                 return await delete_message(message)
 
 
-async def red_list_filter(message, client):
+async def red_list_filter(message):
     server_id = message.guild.id
     if check_if_enabled(server_id) == 1:
         if check_if_channel_filtered(server_id, message.channel.name, 'redlist') == 1:
@@ -415,7 +450,7 @@ async def red_list_filter(message, client):
                         return await delete_message(message)
 
 
-async def char_limit_filter(message, client):
+async def char_limit_filter(message):
     server_id = message.guild.id
     if check_if_enabled(server_id):
         if check_if_channel_filtered(server_id, message.channel.name, 'charlimit') == 1:
@@ -433,7 +468,7 @@ async def char_limit_filter(message, client):
                         return await delete_message(message)
 
 
-async def repeat_message_filter(message,client):
+async def repeat_message_filter(message):
     server_id = message.guild.id
     if check_if_enabled(server_id):
         if check_if_channel_filtered(server_id, message.channel.name, 'repeat') == 1:
@@ -467,3 +502,18 @@ async def repeat_message_filter(message,client):
                                 await message.author\
                                     .send('Your most recent message is too similar to a recent previous message.')
                                 return await delete_message(message)
+
+
+async def caps_filter(message):
+    server_id = message.guild.id
+    if check_if_enabled(server_id):
+        if check_if_channel_filtered(server_id, message.channel.name, 'caps') == 1:
+            if len(message.content) > 15:
+                caps_message = message.content.upper()
+                total = 0
+                for x in range(len(message.content)):
+                    if message.content[x] == caps_message[x]:
+                        total += 1
+                if total / len(message.content) > 2/3:
+                    await message.author.send('Please refrain from using caps lock messages.')
+                    return await delete_message(message)
