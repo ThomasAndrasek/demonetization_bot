@@ -1,6 +1,8 @@
 import sqlite3
 import os
 import discord
+from datetime import timedelta
+from datetime import datetime
 
 # Path for databases
 storage_path = 'C:\\Users\\kille\\Desktop\\databases\\demonetization bot\\chat filter\\{}.db'
@@ -23,6 +25,8 @@ def get_table_name(filter_type, type_to_add):
         return 'charLimit'
     elif filter_type == 'chrlm' and type_to_add == 'channel':
         return 'charLimitChannels'
+    elif filter_type == 'repeat' and type_to_add == 'channel':
+        return 'repeatChannels'
 
 
 def check_if_channel_filtered(server_id, channel_name, filter_type):
@@ -31,16 +35,15 @@ def check_if_channel_filtered(server_id, channel_name, filter_type):
     return_value = 0
     if filter_type == "blacklist":
         c.execute('SELECT channelID FROM blackListChannels WHERE channelID = ?', (channel_name,))
-        data = c.fetchall()
     elif filter_type == "whitelist":
         c.execute('SELECT channelID FROM whiteListChannels WHERE channelID = ?', (channel_name,))
-        data = c.fetchall()
     elif filter_type == "redlist":
         c.execute('SELECT channelID FROM redListChannels WHERE channelID = ?', (channel_name,))
-        data = c.fetchall()
     elif filter_type == "charlimit":
         c.execute('SELECT channelID FROM charLimitChannels WHERE channelID = ?', (channel_name,))
-        data = c.fetchall()
+    elif filter_type == 'repeat':
+        c.execute('SELECT channelID FROM repeatChannels WHERE channelID = ?', (channel_name,))
+    data = c.fetchall()
     if len(data) > 0:
         return_value = 1
     conn.commit()
@@ -69,6 +72,8 @@ def create_table(server_id, table_name):
         c.execute('CREATE TABLE IF NOT EXISTS redListChannels(channelID TEXT)')
     elif table_name == 'charLimitChannels':
         c.execute('CREATE TABLE IF NOT EXISTS charLimitChannels(channelID TEXT)')
+    elif table_name == 'repeatChannels':
+        c.execute('CREATE TABLE IF NOT EXISTS repeatChannels(channelID TEXT)')
     elif table_name == 'enabled':
         c.execute('CREATE TABLE IF NOT EXISTS enableFilter(enable INTEGER)')
     conn.commit()
@@ -183,6 +188,14 @@ def add_to_filter(server_id, thing_to_add, table_name):
             return_value = 1
         else:
             return_value = 0
+    elif table_name == 'repeatChannels':
+        c.execute('SELECT channelID FROM repeatChannels WHERE channelID = ?', (thing_to_add,))
+        data = c.fetchall()
+        if len(data) == 0:
+            c.execute('INSERT INTO repeatChannels VALUES(?)', (thing_to_add,))
+            return_value = 1
+        else:
+            return_value = 0
     conn.commit()
     c.close()
     conn.close()
@@ -250,6 +263,14 @@ def remove_from_filter(server_id, thing_to_remove, table_name):
         else:
             return_value = 1
             c.execute('DELETE FROM charLimitChannels WHERE channelID = ?', (thing_to_remove,))
+    elif table_name == 'repeatChannels':
+        c.execute('SELECT channelID FROM repeatChannels WHERE channelID = ?', (thing_to_remove,))
+        data = c.fetchall()
+        if len(data) == 0:
+            return_value = 0
+        else:
+            return_value = 1
+            c.execute('DELETE FROM repeatChannels WHERE channelID = ?', (thing_to_remove,))
     conn.commit()
     c.close()
     conn.close()
@@ -398,14 +419,51 @@ async def char_limit_filter(message, client):
     server_id = message.guild.id
     if check_if_enabled(server_id):
         if check_if_channel_filtered(server_id, message.channel.name, 'charlimit') == 1:
-            conn =sqlite3.connect(storage_path.format(server_id))
+            conn = sqlite3.connect(storage_path.format(server_id))
             c = conn.cursor()
             c.execute('SELECT lim FROM charLimit')
             data = c.fetchall()
             for item in data:
                 for limit in item:
                     if len(message.content) > limit:
-                        await message.author.send('Please refrain from going over the character limit of {}.'.format(limit))
+                        await message.author\
+                            .send('Please refrain from going over the character limit of {}.'.format(limit))
                         c.close()
                         conn.close()
                         return await delete_message(message)
+
+
+async def repeat_message_filter(message,client):
+    server_id = message.guild.id
+    if check_if_enabled(server_id):
+        if check_if_channel_filtered(server_id, message.channel.name, 'repeat') == 1:
+            async for old_message in message.channel.history(limit=100, after=datetime(message.created_at.year,
+                                                                                       message.created_at.month,
+                                                                                       message.created_at.day,
+                                                                                       message.created_at.hour,
+                                                                                       message.created_at.minute,
+                                                                                       message.created_at.second) -
+                                                                              timedelta(seconds=60)):
+                if old_message.author == message.author:
+                    if old_message.id != message.id:
+                        '''if timedelta(
+                                message.created_at.day - old_message.created_at.day,
+                                message.created_at.hour - old_message.created_at.hour,
+                                message.created_at.minute - old_message.created_at.minute,
+                                message.created_at.second - old_message.created_at.second)\
+                                .total_seconds() > 60:'''
+                        total = 0
+                        for x in range(len(message.content)):
+                            if x < len(message.content) and x < len(old_message.content):
+                                if message.content[x] == old_message.content[x]:
+                                    total += 1
+                        if len(message.content) < len(old_message.content):
+                            if total / len(old_message.content) > 2/3:
+                                await message.author\
+                                    .send('Your most recent message is too similar to a recent previous message.')
+                                return await delete_message(message)
+                        else:
+                            if total / len(message.content) > 2/3:
+                                await message.author\
+                                    .send('Your most recent message is too similar to a recent previous message.')
+                                return await delete_message(message)
