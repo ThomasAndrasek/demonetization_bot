@@ -10,4 +10,8 @@ Even better, be able to log all deleted messages automatically by the bot. Who m
 
 To get started download the code and add your bot token to the client file. Must set up the database storage as shown in the github.
 
+Make sure the bot has the permissions of: View Channels, Manage Messages, Read Message History, and Send Messages
+
 Once everything is running, use the $help command for further instructions.
+
+Join the testing server at https://discord.gg/27DGWcg
