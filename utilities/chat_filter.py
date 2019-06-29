@@ -137,6 +137,33 @@ def disable_filter(server_id):
     conn.close()
 
 
+def clear_filter(server_id, table_name):
+    create_table(server_id, table_name)
+    conn = sqlite3.connect(storage_path.format(server_id))
+    c = conn.cursor()
+    if table_name == 'blackListWords':
+        c.execute('DELETE FROM blackListWords')
+    elif table_name == 'whiteListWords':
+        c.execute('DELETE FROM whiteListWords')
+    elif table_name == 'redListWords':
+        c.execute('DELETE FROM redListWords')
+    elif table_name == 'blackListChannels':
+        c.execute('DELETE FROM blackListChannels')
+    elif table_name == 'whiteListChannels':
+        c.execute('DELETE FROM whiteListChannels')
+    elif table_name == 'redListChannels':
+        c.execute('DELETE FROM redListChannels')
+    elif table_name == 'charLimitChannels':
+        c.execute('DELETE FROM charLimitChannels')
+    elif table_name == 'capsChannels':
+        c.execute('DELETE FROM capsChannels')
+    elif table_name == 'repeatChannels':
+        c.execute('DELETE FROM repeatChannels')
+    conn.commit()
+    c.close()
+    conn.close()
+
+
 def add_to_filter(server_id, thing_to_add, table_name):
     create_table(server_id, table_name)
     return_value = -1
@@ -433,7 +460,6 @@ async def command_is_enable(message):
         await message.channel.send('The chat filter is currently disabled.')
 
 
-
 async def command_display_channels(message, args):
     server_id = message.guild.id
     # $cf bl channel display
@@ -481,6 +507,16 @@ async def command_set_char_limit(message, args):
         limit = args[4]
         set_char_limit(server_id, limit)
         await message.channel.send('The new character limit is "{}."'.format(limit))
+
+
+async def command_clear_filter(message, args):
+    if await check_permissions(message):
+        server_id = message.guild.id
+        filter_type = args[1]
+        type_to_add = args[2]
+        table_name = get_table_name(filter_type, type_to_add)
+        clear_filter(server_id, table_name)
+        await message.channel.send('I have cleared the {} for the {} filter.'.format(type_to_add, get_filter_name(filter_type)))
 
 
 async def command_add_to_filter(message, args):

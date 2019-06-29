@@ -9,20 +9,21 @@ async def support(message):
         '\n' +
         '\n$cf <filter type> word add <word> >> Adds the specified word to the specified filter.' +
         '\n$cf <filter type> word remove <word> >> Removes the specified word from the specified filter.' +
-        '\nAll filter types for last two commands >> bl, wl, rl' +
+        '\n$cf <filter type> word display >> Sends user a list of all filtered words for specified filter.' +
+        '\n$cf <filter type> word clear >> Clears the current list of words for specified filter.'
+        '\nAll filter types for last four commands >> bl, wl, rl' +
         '\n' +
         '\n$cf <filter type> channel add <channel>> Adds the specified channel to the specified filter.' +
         '\n$cf <filter type> channel remove <channel> >> Removes the specified channel from the specified filter.' +
-        '\nAll filter types for last two commands >> bl, wl, rl, caps, chrlm, repeat'
+        '\n$cf <filter type> channel display >> Sends user a list of all filtered channels. ' +
+        '\n$cf <filter type> channel clear >> Clears the list of channels for specified filter.' +
+        '\nAll filter types for last four commands >> bl, wl, rl, caps, chrlm, repeat' +
         '\n' +
         '\n$cf enable >> Enables the chat filter.' +
         '\n$cf disable >> Disables the chat filter.' +
         '\n' +
         '\n$cf chrlm limit set <limit> >> Sets the character limit to specified limit.' +
         '\n$cf chrlm limit display >> Sends the current character limit.'
-        '\n' +
-        '\n$cf <filter type> word display >> Sends user list of all filtered words for specified filter.' +
-        '\n$cf <filter type> channel display >> Sends a list of all filtered channels for specified filter.' +
         '\n' +
         '\n$log enable >> Enables the message deletion log.' +
         '\n$log disable >> Disables the message deletion log.' +

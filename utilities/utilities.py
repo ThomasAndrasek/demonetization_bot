@@ -50,6 +50,11 @@ async def execute_commands(message, client):
                 elif args[0] == '$cf' and (args[1] == 'bl' or args[1] == 'wl' or args[1] == 'rl') \
                         and args[2] == 'word' and args[3] == 'display':
                     await chat_filter.command_display_words(message, args)
+                elif args[0] == '$cf' and args[2] == 'channel' and args[3] == 'clear':
+                    await chat_filter.command_clear_filter(message, args)
+                elif args[0] == '$cf' and (args[1] == 'bl' or args[1] == 'wl' or args[1] == 'rl') and args[2] == 'word'\
+                        and args[3] == 'clear':
+                    await chat_filter.command_clear_filter(message, args)
 
             if len(args) >= 5:
                 if args[0] == '$cf' and args[3] == 'add':
