@@ -1,4 +1,3 @@
-import asyncio
 import discord
 from utilities import utilities
 
@@ -12,6 +11,7 @@ async def on_ready():
     print(client.user.id)
     print('Hello world!')
     print('---------')
+    await client.change_presence(activity=discord.Game('Watching Chat | $help'))
 
 
 @client.event
@@ -19,4 +19,5 @@ async def on_message(message):
     await utilities.execute_commands(message, client)
 
 
+# Add Client Token Here
 client.run('')
