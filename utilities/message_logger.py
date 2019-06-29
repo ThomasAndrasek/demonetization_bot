@@ -2,7 +2,7 @@ import sqlite3
 # Enable and Disable
 # Set Channel
 
-storage_path = 'C:\\Users\\kille\\Desktop\\databases\\demonetization bot\\logger\\logger.db'
+storage_path = 'databases\\logger\\logger_storage.db'
 
 
 def check_for_server(server_id):

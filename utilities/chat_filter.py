@@ -6,7 +6,7 @@ from datetime import datetime
 from utilities import message_logger
 
 # Path for databases
-storage_path = 'C:\\Users\\kille\\Desktop\\databases\\demonetization bot\\chat filter\\{}.db'
+storage_path = 'databases\\chat filter\\{}.db'
 
 
 def get_table_name(filter_type, type_to_add):
@@ -33,16 +33,18 @@ def get_table_name(filter_type, type_to_add):
 
 
 def check_if_channel_filtered(server_id, channel_name, filter_type):
+    create_table(server_id, get_table_name(filter_type, 'word'))
+    create_table(server_id, get_table_name(filter_type, 'channel'))
     conn = sqlite3.connect(storage_path.format(server_id))
     c = conn.cursor()
     return_value = 0
-    if filter_type == "blacklist":
+    if filter_type == 'bl':
         c.execute('SELECT channelID FROM blackListChannels WHERE channelID = ?', (channel_name,))
-    elif filter_type == "whitelist":
+    elif filter_type == 'wl':
         c.execute('SELECT channelID FROM whiteListChannels WHERE channelID = ?', (channel_name,))
-    elif filter_type == "redlist":
+    elif filter_type == 'rl':
         c.execute('SELECT channelID FROM redListChannels WHERE channelID = ?', (channel_name,))
-    elif filter_type == "charlimit":
+    elif filter_type == 'chrlm':
         c.execute('SELECT channelID FROM charLimitChannels WHERE channelID = ?', (channel_name,))
     elif filter_type == 'repeat':
         c.execute('SELECT channelID FROM repeatChannels WHERE channelID = ?', (channel_name,))
@@ -92,6 +94,7 @@ def create_table(server_id, table_name):
 # Return 0 if disabled
 # Return -1 if never instantiated
 def check_if_enabled(server_id):
+    create_table(server_id, 'enabled')
     conn = sqlite3.connect(storage_path.format(server_id))
     c = conn.cursor()
     c.execute('SELECT enable FROM enableFilter')
@@ -527,7 +530,7 @@ async def delete_message(message):
 async def black_list_filter(message):
     server_id = message.guild.id
     if check_if_enabled(server_id) == 1:
-        if check_if_channel_filtered(server_id, message.channel.name, 'blacklist') == 1:
+        if check_if_channel_filtered(server_id, message.channel.name, 'bl') == 1:
             words_to_check = message.content.split()
             black_list_words = get_filtered_words(server_id, 'blackListWords')
             for black_list_word in black_list_words:
@@ -543,7 +546,7 @@ async def black_list_filter(message):
 async def white_list_filter(message):
     server_id = message.guild.id
     if check_if_enabled(server_id) == 1:
-        if check_if_channel_filtered(server_id, message.channel.name, 'whitelist') == 1:
+        if check_if_channel_filtered(server_id, message.channel.name, 'wl') == 1:
             words_to_check = message.content.split()
             white_list_words = get_filtered_words(server_id, 'whiteListWords')
             used_word = False
@@ -561,7 +564,7 @@ async def white_list_filter(message):
 async def red_list_filter(message):
     server_id = message.guild.id
     if check_if_enabled(server_id) == 1:
-        if check_if_channel_filtered(server_id, message.channel.name, 'redlist') == 1:
+        if check_if_channel_filtered(server_id, message.channel.name, 'rl') == 1:
             red_list_words = get_filtered_words(server_id, 'redListWords')
             for red_list_word in red_list_words:
                 word_to_check = ''.join(e for e in red_list_word if e.isalnum())
@@ -576,7 +579,7 @@ async def red_list_filter(message):
 async def char_limit_filter(message):
     server_id = message.guild.id
     if check_if_enabled(server_id):
-        if check_if_channel_filtered(server_id, message.channel.name, 'charlimit') == 1:
+        if check_if_channel_filtered(server_id, message.channel.name, 'chrlm') == 1:
             limit = get_char_limit(server_id)
             if limit != -1:
                 if len(message.content) > limit:
