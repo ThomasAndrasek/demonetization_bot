@@ -103,6 +103,6 @@ async def log(message, reason):
         if channel_id != 'null':
             channel_id = int(channel_id)
             channel = message.guild.get_channel(channel_id)
-            await channel.send('**Message Author:** {}'.format(message.author) +
+            await channel.send('***************************************\n**Message Author:** {}'.format(message.author) +
                                '\n**Reason Deleted:** {}'.format(reason) +
-                               '\n**Message Content:** *{}*'.format(message.content))
+                               '\n**Message Content:** *{}*\n***************************************'.format(message.content))
