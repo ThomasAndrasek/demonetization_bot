@@ -1,12 +1,31 @@
 from utilities import chat_filter
 from utilities import message_logger
+from utilities import general_commands
 import discord
 
 
 async def execute_commands(message, client):
     if message.author.id != 593106374112837647:
+        if message.content.startswith('$help'):
+            await general_commands.support(message)
+        elif message.content.startswith('$filtertypes'):
+            await general_commands.filter_types(message)
+        elif message.content.startswith('$log guide'):
+            await general_commands.log_guide(message)
+
+        args = message.content.split()
+
+        if len(args) >= 3:
+            if message.content.startswith('$cf')and (args[1] == 'bl' or args[1] == 'wl' or args[1] == 'rl')\
+                    and args[2] == 'guide':
+                await general_commands.word_filter_guide(message, args)
+            elif message.content.startswith('$cf') and args[1] == 'chrlm' and args[2] == 'guide':
+                await general_commands.chrlm_guide(message)
+            elif message.content.startswith('$cf') and (args[1] == 'repeat' or args[1] == 'caps') \
+                    and args[2] == 'guide':
+                await general_commands.other_guide(message, args)
+
         if message.channel.type != discord.ChannelType.private:
-            args = message.content.split()
 
             if message.content.startswith('$cf enable'):
                 await chat_filter.command_enable_filter(message)
@@ -26,7 +45,7 @@ async def execute_commands(message, client):
                 await chat_filter.command_is_enable(message)
 
             if len(args) >= 4:
-                if args[0] == '$cf' and args[2] == 'channel' and args[3] == 'display' :
+                if args[0] == '$cf' and args[2] == 'channel' and args[3] == 'display':
                     await chat_filter.command_display_channels(message, args)
                 elif args[0] == '$cf' and (args[1] == 'bl' or args[1] == 'wl' or args[1] == 'rl') \
                         and args[2] == 'word' and args[3] == 'display':
