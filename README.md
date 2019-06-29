@@ -9,3 +9,5 @@ Everything is 100% customizable. Set the words and channels for the bot to filte
 Even better, be able to log all deleted messages automatically by the bot. Who made the message, what the message was, and the reason the message was deleted.
 
 To get started download the code and add your bot token to the client file. Must set up the database storage as shown in the github.
+
+Once everything is running, use the $help command for further instructions.
